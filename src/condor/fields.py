@@ -65,9 +65,14 @@ class AnyTopeofModel(co....):
 
 
 def asdict(obj):
-    return dict(
-        (field.name, getattr(obj, field.name)) for field in fields(obj) if field.init
-    )
+    # Cache attributes and use a list-comprehension (faster than generator in most CPython)
+    obj_getattr = getattr
+    obj_fields = fields(obj)
+    result = {}
+    for field in obj_fields:
+        if field.init:
+            result[field.name] = obj_getattr(obj, field.name)
+    return result
 
 
 class Direction(Enum):
