@@ -51,12 +51,19 @@ class Settings:
         settings : dict
             Module configuration as set by :meth:`get_module`.
         """
-        configured_kwargs = {k: self.settings[-1].get(k, defaults[k]) for k in defaults}
-        extra_kwargs = {k: v for k, v in self.settings[-1].items() if k not in defaults}
-        if extra_kwargs:
+        current = self.settings[-1]
+        # Use set difference for faster extra detection and reduce number of lookups
+        extra_keys = current.keys() - defaults.keys()
+        if extra_keys:
+            extra_kwargs = {k: current[k] for k in extra_keys}
             # TODO warn instead?
             msg = f"Extra keyword arguments provided to configuration {extra_kwargs}"
             raise ValueError(msg)
+
+        # Construct settings dict faster using {**defaults, **current} but only for declared defaults
+        # This is more efficient than a comprehension when few overrides may be present
+        configured_kwargs = defaults.copy()
+        configured_kwargs.update({k: v for k, v in current.items() if k in defaults})
 
         return configured_kwargs
 
