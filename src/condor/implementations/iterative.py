@@ -705,7 +705,12 @@ class SciPyIterCallbackWrapper:
         self.callback = callback
         self.model = model
         self.parameters = parameters
-        self.pass_instance = len(inspect.signature(self.callback).parameters) > 4
+        # Fast path: try to use __code__.co_argcount, fallback to inspect as needed
+        try:
+            param_count = callback.__code__.co_argcount
+        except AttributeError:
+            param_count = len(inspect.signature(callback).parameters)
+        self.pass_instance = param_count > 4
 
     def __call__(self, xk, res=None):
         variable = self.model.variable.wrap(xk)
