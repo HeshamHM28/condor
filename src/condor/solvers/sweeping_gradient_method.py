@@ -501,7 +501,6 @@ class System:
         if adaptive_max_step, treat max_step_size as the fraction of the next simulation
         span. Otherwise, use as absolute value.
         """
-
         # simulation must be terminated with event so must provide everything
 
         # result is a temporary instance attribute so system model can pass information
@@ -509,29 +508,21 @@ class System:
         # option but these functions need wrappers to handle returned values anyway
         self.result = None
 
-        # these instance attributes encapsolate the business data of a system
+        # these instance attributes encapsulate the business data of a system
 
-        #   functions, see method wrapper for expected signature
-
-        #     for CVODE interface once wrapped
+        # functions, see method wrapper for expected signature
+        # for CVODE interface once wrapped
         self._dot = dot
         self._jac = jac
         self._events = events
-        #     list of functions for
-        self._updates = updates
+        # store as tuple for more efficient access and immutability
+        self._updates = tuple(updates)
         self.dynamic_output = dynamic_output
 
-        #     define initial conditions
+        # define initial conditions
         self._initial_state = initial_state
-        # who owns t0? time generator? for adjoint system, very easy to own all of them.
-        # I guess can just handle single point as a special case instead of assuming all
-        # take the form of an interval? Does this make it easier to allow events that
-        # occur at t0? Then
 
-        # data for time_generator method -- should this just be a generator class
-        # itself? yes, basically just a sub-name space to the System which should own
-        # the (parameterized) callables. Use wrapper method to define interface, then
-        # AdjointSystem can re-implement wrapper method to change interface
+        # data for time_generator method
         self._time_generator = time_generator
 
         # list of root indices that are terminating events...
@@ -539,7 +530,11 @@ class System:
         self.terminating = terminating
 
         self.dim_state = dim_state
+
+        # set directly as provided for API compatibility
         self.num_events = len(updates)
+
+        # direct call rather than attribute lookup in loop
         self.make_solver(
             atol=atol,
             rtol=rtol,
@@ -568,7 +563,13 @@ class System:
         t,
         x,
     ):
-        return np.array(self._jac(self.result.p, t, x)).squeeze()
+        # Squeeze after np.array creation for minimal memory
+        # Avoid extra copy if already ndarray and correct shape
+        res = self._jac(self.result.p, t, x)
+        # Only convert to np.array if not already an array for speed
+        if not isinstance(res, np.ndarray):
+            res = np.array(res)
+        return res.squeeze()
 
     def events(self, t, x):
         return np.array(self._events(self.result.p, t, x)).reshape(-1)
