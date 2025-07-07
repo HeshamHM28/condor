@@ -162,40 +162,16 @@ class Newton:
 def _enforce_bounds_scalar(u, du, alpha, lower_bounds, upper_bounds):
     # from openmdao/solvers/linesearch/backtracking.py
 
-    # The assumption is that alpha * step has been added to this vector
-    # just prior to this method being called. We are currently in the
-    # initialization of a line search, and we're trying to ensure that
-    # the initial step does not violate bounds. If it does, we modify
-    # the step vector directly.
-
-    # If u > lower, we're just adding zero. Otherwise, we're adding
-    # the step required to get up to the lower bound.
-    # For du, we normalize by alpha since du eventually gets
-    # multiplied by alpha.
-    change_lower = 0.0 if lower_bounds is None else np.maximum(u, lower_bounds) - u
-
-    # If u < upper, we're just adding zero. Otherwise, we're adding
-    # the step required to get down to the upper bound, but normalized
-    # by alpha since du eventually gets multiplied by alpha.
-    change_upper = 0.0 if upper_bounds is None else np.minimum(u, upper_bounds) - u
-
     if lower_bounds is not None:
-        mask = u < lower_bounds
-        if np.any(mask):
-            print("vals exceeding lower bounds")
-            print("\tval:", u[mask])
-            print("\tlower:", lower_bounds[mask])
+        change_lower = np.maximum(u, lower_bounds) - u
+    else:
+        change_lower = 0.0
 
     if upper_bounds is not None:
-        mask = u > upper_bounds
-        if np.any(mask):
-            print("vals exceeding upper bounds")
-            print("\tval:", u[mask])
-            print("\tupper:", upper_bounds[mask])
+        change_upper = np.minimum(u, upper_bounds) - u
+    else:
+        change_upper = 0.0
 
     change = change_lower + change_upper
 
-    # TODO don't modify in place for now while testing
-    # u += change
-    # du += change / alpha
     return u + change, du + change / alpha
