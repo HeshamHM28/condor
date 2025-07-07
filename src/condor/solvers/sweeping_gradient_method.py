@@ -561,7 +561,15 @@ class System:
         return np.array(self._initial_state(self.result.p)).reshape(-1)
 
     def dots(self, t, x):
-        return np.array(self._dot(self.result.p, t, x)).reshape(-1)
+        # Optimization: Use np.asarray and flatten only if necessary.
+        # Avoid unnecessary data copies if _dot already outputs the correct shape.
+        val = self._dot(self.result.p, t, x)
+        # Fast path: if already a flat numpy array, just return that
+        arr = np.asarray(val)
+        if arr.ndim == 1:  # Already vector
+            return arr
+        # Only flatten if not already 1D
+        return arr.ravel()
 
     def jac(
         self,
