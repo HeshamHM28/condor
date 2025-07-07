@@ -6,8 +6,7 @@ import importlib
 import logging
 import operator
 import sys
-from dataclasses import asdict as dataclass_asdict
-from dataclasses import dataclass, fields, make_dataclass
+from dataclasses import dataclass, fields, is_dataclass, make_dataclass
 from enum import Enum
 
 import numpy as np
@@ -89,7 +88,20 @@ class FieldValues:
     def asdict(self):
         """call the :mod:`dataclasses` module :func:`asdict` function on this field
         datacalss"""
-        return dataclass_asdict(self)
+
+        def fast_asdict(obj):
+            if is_dataclass(obj):
+                return {f.name: fast_asdict(getattr(obj, f.name)) for f in fields(obj)}
+            elif isinstance(obj, (list, tuple)):
+                return type(obj)(fast_asdict(v) for v in obj)
+            elif isinstance(obj, dict):
+                return type(obj)(
+                    (fast_asdict(k), fast_asdict(v)) for k, v in obj.items()
+                )
+            else:
+                return obj
+
+        return fast_asdict(self)
 
     def flatten(self):
         """turn the bound values of this field instance into a single symbol -- may be
