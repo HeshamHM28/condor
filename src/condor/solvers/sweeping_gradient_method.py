@@ -511,31 +511,13 @@ class System:
 
         # these instance attributes encapsolate the business data of a system
 
-        #   functions, see method wrapper for expected signature
-
-        #     for CVODE interface once wrapped
         self._dot = dot
         self._jac = jac
         self._events = events
-        #     list of functions for
         self._updates = updates
         self.dynamic_output = dynamic_output
-
-        #     define initial conditions
         self._initial_state = initial_state
-        # who owns t0? time generator? for adjoint system, very easy to own all of them.
-        # I guess can just handle single point as a special case instead of assuming all
-        # take the form of an interval? Does this make it easier to allow events that
-        # occur at t0? Then
-
-        # data for time_generator method -- should this just be a generator class
-        # itself? yes, basically just a sub-name space to the System which should own
-        # the (parameterized) callables. Use wrapper method to define interface, then
-        # AdjointSystem can re-implement wrapper method to change interface
         self._time_generator = time_generator
-
-        # list of root indices that are terminating events...
-        # any(rootsfound[terminating]) --> terminates simulation
         self.terminating = terminating
 
         self.dim_state = dim_state
@@ -558,7 +540,16 @@ class System:
         )
 
     def initial_state(self):
-        return np.array(self._initial_state(self.result.p)).reshape(-1)
+        """
+        Optimized: Avoids unnecessary array copies by using np.asarray,
+        and only does flat reshape if needed.
+        """
+        istate = self._initial_state(self.result.p)
+        arr = np.asarray(istate)
+        # Only reshape if not already 1D
+        if arr.ndim != 1:
+            arr = arr.reshape(-1)
+        return arr
 
     def dots(self, t, x):
         return np.array(self._dot(self.result.p, t, x)).reshape(-1)
