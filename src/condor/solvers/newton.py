@@ -5,10 +5,12 @@ from scipy import linalg
 
 def wrap_ls_func(f):
     def func(x, p):
-        out = f(x, p).toarray().reshape(-1)
+        out = f(x, p).toarray()
         if out.size == 1:
-            out = out[0]
-        return out
+            # If only one element, extract it directly
+            return out.item()
+        # Otherwise, return a 1D view (no copy if already 1D)
+        return out.ravel()
 
     return func
 
